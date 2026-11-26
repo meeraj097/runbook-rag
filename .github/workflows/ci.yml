@@ -16,5 +16,13 @@ jobs:
       - run: docker compose build
       - run: |
           docker compose up -d api
-          curl --fail --retry 15 --retry-connrefused --retry-delay 1 http://localhost:8000/openapi.json > /dev/null
+          curl --fail --retry 15 --retry-all-errors --retry-delay 1 http://localhost:8000/openapi.json > /dev/null
           curl -fsS -H 'Content-Type: application/json' -d '{"question":"queue depth"}' http://localhost:8000/ask | python -c 'import json,sys; assert json.load(sys.stdin)["mode"] == "extract"'
+      - name: Exercise local model generation
+        run: |
+          docker compose --profile llm up -d ollama
+          docker compose exec -T ollama ollama pull qwen2.5:0.5b
+          ANSWER_MODE=generate docker compose up -d api
+          curl -fsS --retry 15 --retry-all-errors --retry-delay 1 http://localhost:8000/openapi.json > /dev/null
+          curl -fsS -H 'Content-Type: application/json' -d '{"question":"What should I compare when queue depth rises?"}' http://localhost:8000/ask > answer.json
+          python -c 'import json; r=json.load(open("answer.json")); print(r); assert r["mode"] == "generate" and r["sources"] and r["answer"].strip()'
