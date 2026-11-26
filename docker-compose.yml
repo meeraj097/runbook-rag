@@ -1,0 +1,16 @@
+services:
+  api:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      ANSWER_MODE: ${ANSWER_MODE:-extract}
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:0.5b}
+  ollama:
+    image: ollama/ollama:0.6.8
+    profiles: [llm]
+    volumes:
+      - models:/root/.ollama
+volumes:
+  models:
